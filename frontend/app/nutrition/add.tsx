@@ -34,7 +34,7 @@ export default function AddFood() {
   const searchQ = useQuery({
     queryKey: ["food-search", q],
     queryFn: () => apiFetch<Food[]>(`/foods/search?q=${encodeURIComponent(q)}`),
-    enabled: tab === "search" && q.trim().length >= 2,
+    enabled: tab === "search",
   });
   const recentQ = useQuery({ queryKey: ["food-recent"], queryFn: () => apiFetch<Food[]>("/foods/recent"), enabled: tab === "recent" });
   const customQ = useQuery({ queryKey: ["food-custom"], queryFn: () => apiFetch<Food[]>("/foods/custom"), enabled: tab === "custom" });
@@ -54,8 +54,9 @@ export default function AddFood() {
   const confirmAdd = async () => {
     if (!selected) return;
     const g = clampNum(grams) || 100;
-    const f = g / 100;
-    const base = selected.quantity ? selected.quantity / 100 : 1; // recent stored already scaled? treat as per100
+    // recent items store macros for their logged quantity; normalize to per-100g
+    const per100 = selected.quantity ? selected.quantity / 100 : 1;
+    const f = g / 100 / per100;
     addMut.mutate({
       meal,
       name: selected.name,
@@ -81,10 +82,10 @@ export default function AddFood() {
   };
 
   const renderItem = ({ item }: { item: Food }) => (
-    <Pressable testID={`food-item-${item.name}`} style={s.foodRow} onPress={() => { setSelected(item); setGrams("100"); }}>
+    <Pressable testID={`food-item-${item.name}`} style={s.foodRow} onPress={() => { setSelected(item); setGrams(String(item.quantity || 100)); }}>
       <View style={{ flex: 1 }}>
         <Text style={s.foodName} numberOfLines={1}>{item.name}</Text>
-        <Text style={s.foodMeta} numberOfLines={1}>{item.brand} · {Math.round(item.calories)} kcal /100g</Text>
+        <Text style={s.foodMeta} numberOfLines={1}>{item.brand} · {Math.round(item.calories)} kcal{item.quantity ? "" : " /100g"}</Text>
       </View>
       <Text style={s.foodMacro}>P{Math.round(item.protein)} C{Math.round(item.carbs)} F{Math.round(item.fat)}</Text>
     </Pressable>

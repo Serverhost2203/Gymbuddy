@@ -39,3 +39,10 @@ Modern, premium dark fitness & gym app (Android + iOS). Progress-tracking focuse
 ## Next Tasks
 - Wire push notifications on user request.
 - Expand admin UI to CRUD exercises/foods/translations.
+
+## Iteration 2 (2026-06-14)
+- FIXED: Food database now browsable — /api/foods/search accepts empty query and returns built-in DB (~84 foods, all with macros); text search switched to search.openfoodfacts.org (old cgi API returned 503). Food add screen shows the database immediately.
+- FIXED: Training set input boxes redesigned in workout/session.tsx — uniform SET/KG/REPS columns with aligned boxes and done check.
+- ADDED: Admin content management UI (admin/index.tsx) with tabs Stats/Users/Exercises/Foods/Achievements — add/edit/delete via backend admin endpoints (+ new GET list & DELETE achievement endpoints).
+- ADDED: /app/SELF_HOSTING.md — full guide to run backend + MongoDB on the user's Linux Mint server (systemd, backups, EXPO_PUBLIC_BACKEND_URL).
+- Backend tests: 48/48 pass.

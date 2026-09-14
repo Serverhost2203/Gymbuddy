@@ -555,33 +555,38 @@ async def delete_photo(photo_id: str, user: dict = Depends(get_current_user)):
 
 # ============================= FOOD & NUTRITION =============================
 @api_router.get("/foods/search")
-async def search_foods(q: str, user: dict = Depends(get_current_user)):
+async def search_foods(q: str = "", user: dict = Depends(get_current_user)):
     q = q.strip()
-    results = []
-    # custom + seed foods
-    cursor = db.foods.find(
-        {"name": {"$regex": q, "$options": "i"}, "$or": [{"user_id": None}, {"user_id": user["id"]}]},
-        {"_id": 0}
-    ).limit(20)
-    results = await cursor.to_list(20)
-    # Open Food Facts search
-    if len(results) < 15 and len(q) >= 2:
+    lang = (user.get("settings", {}) or {}).get("language", "en")
+    # local + custom foods (empty q = browse whole built-in database)
+    query: dict = {"$or": [{"user_id": None}, {"user_id": user["id"]}]}
+    if q:
+        query["name"] = {"$regex": q, "$options": "i"}
+    results = await db.foods.find(query, {"_id": 0}).sort("name", 1).limit(40).to_list(40)
+    # Open Food Facts (search-a-licious) — only when actively searching
+    if q and len(q) >= 2 and len(results) < 25:
         try:
             async with httpx.AsyncClient(timeout=6) as http:
                 r = await http.get(
-                    "https://world.openfoodfacts.org/cgi/search.pl",
-                    params={"search_terms": q, "search_simple": 1, "action": "process",
-                            "json": 1, "page_size": 15, "fields": "product_name,brands,nutriments,code"},
+                    "https://search.openfoodfacts.org/search",
+                    params={"q": q, "page_size": 20, "lang": lang},
                 )
                 data = r.json()
-                for p in data.get("products", []):
-                    n = p.get("nutriments", {})
-                    name = p.get("product_name")
-                    if not name:
+                seen = {x["name"].lower() for x in results}
+                for p in data.get("hits", []):
+                    name = p.get(f"product_name_{lang}") or p.get("product_name")
+                    n = p.get("nutriments", {}) or {}
+                    kcal = n.get("energy-kcal_100g")
+                    if not name or not kcal:
                         continue
+                    if name.lower() in seen:
+                        continue
+                    seen.add(name.lower())
+                    brands = p.get("brands")
+                    brand = (brands[0] if isinstance(brands, list) and brands else brands) or "Off"
                     results.append({
-                        "id": None, "name": name, "brand": p.get("brands", "") or "Off",
-                        "calories": round(n.get("energy-kcal_100g", 0) or 0, 1),
+                        "id": None, "name": name, "brand": brand,
+                        "calories": round(kcal, 1),
                         "protein": round(n.get("proteins_100g", 0) or 0, 1),
                         "carbs": round(n.get("carbohydrates_100g", 0) or 0, 1),
                         "fat": round(n.get("fat_100g", 0) or 0, 1),
@@ -589,7 +594,7 @@ async def search_foods(q: str, user: dict = Depends(get_current_user)):
                     })
         except Exception as e:
             logger.warning(f"OFF search failed: {e}")
-    return results[:25]
+    return results[:40]
 
 
 @api_router.get("/foods/barcode/{code}")
@@ -1068,6 +1073,27 @@ async def admin_get_translations(lang: Optional[str] = None, admin: dict = Depen
     return await db.translations.find(q, {"_id": 0}).to_list(3000)
 
 
+@api_router.get("/admin/exercises")
+async def admin_list_exercises(admin: dict = Depends(require_admin)):
+    return await db.exercises.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+
+
+@api_router.get("/admin/foods")
+async def admin_list_foods(admin: dict = Depends(require_admin)):
+    return await db.foods.find({"user_id": None}, {"_id": 0}).sort("name", 1).to_list(1000)
+
+
+@api_router.get("/admin/achievements")
+async def admin_list_achievements(admin: dict = Depends(require_admin)):
+    return await db.achievements.find({}, {"_id": 0}).sort("category", 1).to_list(200)
+
+
+@api_router.delete("/admin/achievements/{code}")
+async def admin_delete_achievement(code: str, admin: dict = Depends(require_admin)):
+    await db.achievements.delete_one({"code": code})
+    return {"ok": True}
+
+
 # ----------------------------- seeding -----------------------------
 async def seed_database():
     if await db.exercises.count_documents({}) == 0:
@@ -1075,10 +1101,15 @@ async def seed_database():
             await db.exercises.insert_one({"id": new_id(), "name": name, "muscle_group": mg,
                                            "equipment": equip, "instructions": instr})
         logger.info("Seeded exercises")
-    if await db.foods.count_documents({"user_id": None}) == 0:
+    if await db.foods.count_documents({"user_id": None}) < len(seed_data.FOODS):
         for name, brand, cal, p, c, f in seed_data.FOODS:
-            await db.foods.insert_one({"id": new_id(), "user_id": None, "verified": True, "name": name,
-                                       "brand": brand, "calories": cal, "protein": p, "carbs": c, "fat": f, "barcode": None})
+            await db.foods.update_one(
+                {"user_id": None, "name": name},
+                {"$set": {"user_id": None, "verified": True, "name": name,
+                          "brand": brand, "calories": cal, "protein": p, "carbs": c, "fat": f, "barcode": None},
+                 "$setOnInsert": {"id": new_id()}},
+                upsert=True,
+            )
         logger.info("Seeded foods")
     if await db.workout_plans.count_documents({"is_template": True}) == 0:
         for p in seed_data.WORKOUT_PLANS:

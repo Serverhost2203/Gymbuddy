@@ -144,18 +144,22 @@ export default function Session() {
               <Pressable testID={`remove-ex-${ei}`} onPress={() => removeExercise(ei)} hitSlop={8}><Trash color={colors.muted} size={18} /></Pressable>
             </View>
             <View style={s.setHeader}>
-              <Text style={[s.setHeaderText, { width: 30 }]}>#</Text>
-              <Text style={[s.setHeaderText, { flex: 1 }]}>kg</Text>
-              <Text style={[s.setHeaderText, { flex: 1 }]}>{t("workout.reps")}</Text>
-              <View style={{ width: 40 }} />
+              <Text style={[s.setHeaderText, { width: 40 }]}>{t("workout.sets").toUpperCase()}</Text>
+              <Text style={[s.setHeaderText, { flex: 1 }]}>KG</Text>
+              <Text style={[s.setHeaderText, { flex: 1 }]}>{t("workout.reps").toUpperCase()}</Text>
+              <View style={{ width: 48 }} />
             </View>
             {ex.sets.map((st, si) => (
-              <View key={si} style={s.setRow}>
-                <Text style={s.setNum}>{si + 1}</Text>
-                <TextInput testID={`set-weight-${ei}-${si}`} value={st.weight} onChangeText={(v) => updateSet(ei, si, "weight", v)} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={[s.setInput, st.done && s.setInputDone]} />
-                <TextInput testID={`set-reps-${ei}-${si}`} value={st.reps} onChangeText={(v) => updateSet(ei, si, "reps", v)} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={[s.setInput, st.done && s.setInputDone]} />
+              <View key={si} style={[s.setRow, st.done && s.setRowDone]}>
+                <View style={s.setNumBadge}><Text style={s.setNum}>{si + 1}</Text></View>
+                <View style={s.inputWrap}>
+                  <TextInput testID={`set-weight-${ei}-${si}`} value={st.weight} onChangeText={(v) => updateSet(ei, si, "weight", v)} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={s.setInput} />
+                </View>
+                <View style={s.inputWrap}>
+                  <TextInput testID={`set-reps-${ei}-${si}`} value={st.reps} onChangeText={(v) => updateSet(ei, si, "reps", v)} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={s.setInput} />
+                </View>
                 <Pressable testID={`set-done-${ei}-${si}`} onPress={() => toggleSet(ei, si)} style={[s.doneBtn, st.done && { backgroundColor: colors.success, borderColor: colors.success }]}>
-                  <Check color={st.done ? colors.onSuccess : colors.muted} size={18} weight="bold" />
+                  <Check color={st.done ? colors.onSuccess : colors.muted} size={20} weight="bold" />
                 </Pressable>
               </View>
             ))}
@@ -236,13 +240,15 @@ const useStyles = makeStyles((c) => ({
   exCard: { backgroundColor: c.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: spacing.lg },
   exHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },
   exName: { color: c.onSurface, fontSize: 17, fontWeight: "800", flex: 1 },
-  setHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.xs },
-  setHeaderText: { color: c.muted, fontSize: 12, fontWeight: "700", textAlign: "center" },
+  setHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm, paddingHorizontal: 2 },
+  setHeaderText: { color: c.muted, fontSize: 11, fontWeight: "800", textAlign: "center", letterSpacing: 0.5 },
   setRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
-  setNum: { color: c.onSurfaceTertiary, fontSize: 15, fontWeight: "800", width: 30, textAlign: "center" },
-  setInput: { flex: 1, backgroundColor: c.surfaceTertiary, borderRadius: radius.sm, height: 44, textAlign: "center", color: c.onSurface, fontSize: 16, fontWeight: "700" },
-  setInputDone: { backgroundColor: "rgba(50,215,75,0.12)" },
-  doneBtn: { width: 40, height: 40, borderRadius: radius.sm, borderWidth: 1.5, borderColor: c.borderStrong, alignItems: "center", justifyContent: "center" },
+  setRowDone: { opacity: 1 },
+  setNumBadge: { width: 40, height: 48, borderRadius: radius.sm, backgroundColor: c.surfaceTertiary, alignItems: "center", justifyContent: "center" },
+  setNum: { color: c.onSurfaceSecondary, fontSize: 16, fontWeight: "800" },
+  inputWrap: { flex: 1 },
+  setInput: { backgroundColor: c.surfaceTertiary, borderRadius: radius.sm, height: 48, textAlign: "center", color: c.onSurface, fontSize: 18, fontWeight: "800", borderWidth: 1, borderColor: c.border },
+  doneBtn: { width: 48, height: 48, borderRadius: radius.sm, borderWidth: 1.5, borderColor: c.borderStrong, alignItems: "center", justifyContent: "center" },
   addSet: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: spacing.xs },
   addSetText: { color: c.brandPrimary, fontSize: 14, fontWeight: "700" },
   addEx: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: c.surfaceSecondary, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, height: 52 },
