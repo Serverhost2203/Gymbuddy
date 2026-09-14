@@ -216,6 +216,7 @@ export const de = {
   "profile.settings": "Einstellungen",
   "profile.language": "Sprache",
   "profile.admin": "Admin-Bereich",
+  "profile.adminPanel": "Admin Panel",
   "profile.logout": "Abmelden",
   "profile.memberSince": "Mitglied seit",
   "profile.account": "Konto",
@@ -246,6 +247,15 @@ export const de = {
   "admin.enable": "Aktivieren",
   "admin.makeAdmin": "Zum Admin",
   "admin.removeAdmin": "Admin entfernen",
+
+  "workout.lastTime": "Zuletzt",
+  "workout.target": "Ziel",
+  "workout.apply": "Übernehmen",
+
+  "settings.training": "Training",
+  "settings.restTime": "Standard-Pausenzeit",
+  "settings.autoStartRest": "Pausen-Timer automatisch starten",
+  "settings.waterGoal": "Tägliches Wasserziel (ml)",
 
   "error.generic": "Etwas ist schiefgelaufen",
   "error.network": "Netzwerkfehler",

@@ -61,7 +61,7 @@ export default function Profile() {
           {user?.is_admin && (
             <>
               <Text style={s.section}>{t("admin.title")}</Text>
-              <Row testID="row-admin" icon={<ShieldStar color={colors.warning} size={22} weight="fill" />} label={t("profile.admin")} onPress={() => router.push("/admin")} />
+              <Row testID="row-admin" icon={<ShieldStar color={colors.warning} size={22} weight="fill" />} label={t("profile.adminPanel")} onPress={() => router.push("/admin")} />
             </>
           )}
 

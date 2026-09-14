@@ -46,3 +46,14 @@ Modern, premium dark fitness & gym app (Android + iOS). Progress-tracking focuse
 - ADDED: Admin content management UI (admin/index.tsx) with tabs Stats/Users/Exercises/Foods/Achievements — add/edit/delete via backend admin endpoints (+ new GET list & DELETE achievement endpoints).
 - ADDED: /app/SELF_HOSTING.md — full guide to run backend + MongoDB on the user's Linux Mint server (systemd, backups, EXPO_PUBLIC_BACKEND_URL).
 - Backend tests: 48/48 pass.
+
+## Iteration 3 (2026-06-14)
+- ADDED: Progressive overload — POST /api/exercises/suggestions returns last performance + next-target suggestion per exercise; active session shows "Last: … · Target: …" with an Apply button that fills all sets.
+- ADDED: User-configurable training settings — default rest time (60/90/120/180s chips), auto-start-rest toggle, daily water goal; persisted in user.settings and honored across session rest timer & nutrition water card. Rest is also editable per-exercise (±15s) live in a session.
+- Backend tests: 64/64 pass.
+
+## Iteration 4 (2026-06-14)
+- ADDED: Super-admin — email myscraptv@gmail.com is auto-granted is_admin on register/login (and on startup). Only admins see the "Admin Panel" row.
+- ADDED: Admin Panel user-detail — GET /api/admin/users/{id}/detail returns profile (incl. birthdate/Geb.), computed BMI/calories, full training history (date, name, duration, volume, sets, per-set weights & reps), PRs, weight history, totals. New screen app/admin/user/[id].tsx; user rows in admin are tappable. Access limited to admins (401/403 otherwise).
+- ADDED: birthdate field in profile editor.
+- Backend tests: 76/76 pass.

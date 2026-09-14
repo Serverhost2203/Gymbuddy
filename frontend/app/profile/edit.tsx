@@ -34,12 +34,13 @@ export default function EditProfile() {
   const [target, setTarget] = useState(p.target_weight ? String(p.target_weight) : "");
   const [goal, setGoal] = useState(p.goal || "maintenance");
   const [activity, setActivity] = useState(p.activity_level || "moderate");
+  const [birthdate, setBirthdate] = useState(p.birthdate || "");
 
   const mut = useMutation({
     mutationFn: () =>
       apiFetch("/profile", {
         method: "PUT",
-        body: JSON.stringify({ name, age: parseInt(age) || 25, gender, height: clampNum(height), weight: clampNum(weight), target_weight: clampNum(target), goal, activity_level: activity }),
+        body: JSON.stringify({ name, age: parseInt(age) || 25, gender, height: clampNum(height), weight: clampNum(weight), target_weight: clampNum(target), goal, activity_level: activity, birthdate }),
       }),
     onSuccess: async () => {
       await refreshUser();
@@ -63,6 +64,7 @@ export default function EditProfile() {
           <Input testID="edit-age" style={s.col} label={t("onboarding.age")} value={age} onChangeText={setAge} keyboardType="numeric" />
           <Input testID="edit-height" style={s.col} label={t("onboarding.height")} value={height} onChangeText={setHeight} keyboardType="numeric" />
         </View>
+        <Input testID="edit-birthdate" label="Geb. (YYYY-MM-DD)" value={birthdate} onChangeText={setBirthdate} placeholder="1995-06-15" style={{ marginTop: spacing.md }} />
         <View style={s.two}>
           <Input testID="edit-weight" style={s.col} label={t("onboarding.weight")} value={weight} onChangeText={setWeight} keyboardType="numeric" />
           <Input testID="edit-target" style={s.col} label={t("onboarding.targetWeight")} value={target} onChangeText={setTarget} keyboardType="numeric" />

@@ -112,7 +112,7 @@ export default function Admin() {
 
   return (
     <View style={s.root}>
-      <Header title={t("profile.admin")} onBack={() => router.back()} right={FORMS[view] ? <Pressable testID="admin-add" onPress={openNew}><Plus color={colors.brandPrimary} size={24} weight="bold" /></Pressable> : null} />
+      <Header title={t("profile.adminPanel")} onBack={() => router.back()} right={FORMS[view] ? <Pressable testID="admin-add" onPress={openNew}><Plus color={colors.brandPrimary} size={24} weight="bold" /></Pressable> : null} />
       <View style={{ paddingVertical: spacing.md }}>
         <ChipRow
           items={[["stats", t("admin.statistics")], ["users", t("admin.users")], ["exercises", t("admin.exercises")], ["foods", t("admin.foods")], ["achievements", t("admin.achievements")]].map(([k, l]) => ({ key: k, label: l }))}
@@ -143,10 +143,10 @@ export default function Admin() {
           contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + spacing.xl, gap: spacing.sm }}
           renderItem={({ item: u }) => (
             <Card testID={`admin-user-${u.id}`} style={s.userRow}>
-              <View style={{ flex: 1 }}>
+              <Pressable testID={`open-user-${u.id}`} style={{ flex: 1 }} onPress={() => router.push(`/admin/user/${u.id}`)}>
                 <Text style={s.userEmail} numberOfLines={1}>{u.email}</Text>
                 <Text style={s.userMeta}>{u.profile?.name || "—"}{u.is_admin ? " · admin" : ""}{u.disabled ? " · disabled" : ""}</Text>
-              </View>
+              </Pressable>
               <Pressable testID={`toggle-disable-${u.id}`} onPress={() => userMut.mutate({ id: u.id, body: { disabled: !u.disabled } })} style={[s.miniBtn, { borderColor: u.disabled ? colors.success : colors.error }]}>
                 <Text style={[s.miniBtnText, { color: u.disabled ? colors.success : colors.error }]}>{u.disabled ? t("admin.enable") : t("admin.disable")}</Text>
               </Pressable>

@@ -216,6 +216,7 @@ export const fr = {
   "profile.settings": "Réglages",
   "profile.language": "Langue",
   "profile.admin": "Espace Admin",
+  "profile.adminPanel": "Admin Panel",
   "profile.logout": "Déconnexion",
   "profile.memberSince": "Membre depuis",
   "profile.account": "Compte",
@@ -246,6 +247,15 @@ export const fr = {
   "admin.enable": "Activer",
   "admin.makeAdmin": "Rendre Admin",
   "admin.removeAdmin": "Retirer Admin",
+
+  "workout.lastTime": "Dernière",
+  "workout.target": "Objectif",
+  "workout.apply": "Appliquer",
+
+  "settings.training": "Entraînement",
+  "settings.restTime": "Repos par défaut",
+  "settings.autoStartRest": "Démarrer le minuteur automatiquement",
+  "settings.waterGoal": "Objectif d'eau quotidien (ml)",
 
   "error.generic": "Une erreur est survenue",
   "error.network": "Erreur réseau",

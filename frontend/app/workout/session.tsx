@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, TextInput, FlatList, Platform } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,10 +6,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import * as Haptics from "expo-haptics";
-import { Check, Plus, Trash, X } from "phosphor-react-native";
+import { Check, Plus, Minus, Trash, X, TrendUp } from "phosphor-react-native";
 
 import { apiFetch } from "@/src/api";
 import { queryClient } from "@/src/query-client";
+import { useAuth } from "@/src/auth";
 import { makeStyles, spacing, radius, useTheme } from "@/src/theme";
 import { Header, Button, Loading } from "@/src/components/ui";
 import { ProgressRing } from "@/src/components/ProgressRing";
@@ -30,6 +31,9 @@ export default function Session() {
   const router = useRouter();
   const { t } = useTranslation();
   const { planId, dayIndex } = useLocalSearchParams<{ planId?: string; dayIndex?: string }>();
+  const { user } = useAuth();
+  const defaultRest = user?.settings?.default_rest ?? 90;
+  const autoStartRest = user?.settings?.rest_autostart !== false;
 
   const [exercises, setExercises] = useState<Ex[]>([]);
   const [elapsed, setElapsed] = useState(0);
@@ -41,6 +45,13 @@ export default function Session() {
 
   const planQ = useQuery({ queryKey: ["plan", planId], queryFn: () => apiFetch(`/plans/${planId}`), enabled: !!planId });
   const exListQ = useQuery({ queryKey: ["exercises", "all"], queryFn: () => apiFetch<any[]>("/exercises"), enabled: picker });
+
+  const names = useMemo(() => exercises.map((e) => e.exercise_name), [exercises]);
+  const suggQ = useQuery({
+    queryKey: ["suggestions", names.join("|")],
+    queryFn: () => apiFetch<Record<string, any>>("/exercises/suggestions", { method: "POST", body: JSON.stringify({ names }) }),
+    enabled: names.length > 0,
+  });
 
   useEffect(() => {
     if (planId && planQ.data && !started.current) {
@@ -104,8 +115,23 @@ export default function Session() {
       set.done = !set.done;
       if (set.done) {
         if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        setRest({ total: copy[ei].rest, left: copy[ei].rest });
+        if (autoStartRest) setRest({ total: copy[ei].rest, left: copy[ei].rest });
       }
+      return copy;
+    });
+  };
+  const changeRest = (ei: number, delta: number) => {
+    setExercises((prev) => {
+      const copy = prev.map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x })) }));
+      copy[ei].rest = Math.max(15, (copy[ei].rest || 90) + delta);
+      return copy;
+    });
+  };
+  const applySuggestion = (ei: number, sg: { weight: number; reps: number }) => {
+    setExercises((prev) => {
+      const copy = prev.map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x })) }));
+      copy[ei].sets = copy[ei].sets.map((st) => ({ ...st, weight: String(sg.weight), reps: String(sg.reps) }));
+      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       return copy;
     });
   };
@@ -125,7 +151,7 @@ export default function Session() {
     });
   };
   const addExercise = (ex: any) => {
-    setExercises((prev) => [...prev, { exercise_name: ex.name, muscle_group: ex.muscle_group, rest: 90, sets: [{ reps: "10", weight: "", done: false }] }]);
+    setExercises((prev) => [...prev, { exercise_name: ex.name, muscle_group: ex.muscle_group, rest: defaultRest, sets: [{ reps: "10", weight: "", done: false }] }]);
     setPicker(false);
   };
   const removeExercise = (ei: number) => setExercises((prev) => prev.filter((_, i) => i !== ei));
@@ -137,12 +163,37 @@ export default function Session() {
       <Header title={sessionName} onBack={() => router.back()} right={<Text style={s.timer}>{fmt(elapsed)}</Text>} />
 
       <KeyboardAwareScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + 100, gap: spacing.md }} bottomOffset={80}>
-        {exercises.map((ex, ei) => (
+        {exercises.map((ex, ei) => {
+          const sg = suggQ.data?.[ex.exercise_name];
+          return (
           <View key={ei} style={s.exCard} testID={`session-ex-${ei}`}>
             <View style={s.exHead}>
               <Text style={s.exName}>{ex.exercise_name}</Text>
               <Pressable testID={`remove-ex-${ei}`} onPress={() => removeExercise(ei)} hitSlop={8}><Trash color={colors.muted} size={18} /></Pressable>
             </View>
+
+            {sg?.last ? (
+              <View style={s.sugg} testID={`sugg-${ei}`}>
+                <TrendUp color={colors.success} size={16} weight="bold" />
+                <Text style={s.suggText}>
+                  {t("workout.lastTime")}: {sg.last.weight}kg × {sg.last.reps}
+                  {sg.suggestion ? `  ·  ${t("workout.target")}: ${sg.suggestion.weight}kg × ${sg.suggestion.reps}` : ""}
+                </Text>
+                {sg.suggestion ? (
+                  <Pressable testID={`apply-sugg-${ei}`} onPress={() => applySuggestion(ei, sg.suggestion)} style={s.applyBtn}>
+                    <Text style={s.applyText}>{t("workout.apply")}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+
+            <View style={s.restCtrl}>
+              <Text style={s.restLabelSmall}>{t("workout.rest")}</Text>
+              <Pressable testID={`rest-minus-${ei}`} onPress={() => changeRest(ei, -15)} style={s.restStep}><Minus color={colors.onSurface} size={14} weight="bold" /></Pressable>
+              <Text style={s.restVal}>{ex.rest}s</Text>
+              <Pressable testID={`rest-plus-${ei}`} onPress={() => changeRest(ei, 15)} style={s.restStep}><Plus color={colors.onSurface} size={14} weight="bold" /></Pressable>
+            </View>
+
             <View style={s.setHeader}>
               <Text style={[s.setHeaderText, { width: 40 }]}>{t("workout.sets").toUpperCase()}</Text>
               <Text style={[s.setHeaderText, { flex: 1 }]}>KG</Text>
@@ -168,7 +219,8 @@ export default function Session() {
               <Text style={s.addSetText}>{t("workout.addSet")}</Text>
             </Pressable>
           </View>
-        ))}
+          );
+        })}
 
         <Pressable testID="add-exercise-btn" onPress={() => setPicker(true)} style={s.addEx}>
           <Plus color={colors.onSurface} size={18} weight="bold" />
@@ -240,6 +292,14 @@ const useStyles = makeStyles((c) => ({
   exCard: { backgroundColor: c.surfaceSecondary, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, padding: spacing.lg },
   exHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.md },
   exName: { color: c.onSurface, fontSize: 17, fontWeight: "800", flex: 1 },
+  sugg: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: "rgba(50,215,75,0.10)", borderRadius: radius.sm, padding: spacing.sm, marginBottom: spacing.md },
+  suggText: { color: c.onSurfaceSecondary, fontSize: 12, fontWeight: "600", flex: 1 },
+  applyBtn: { backgroundColor: c.success, paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.sm },
+  applyText: { color: c.onSuccess, fontSize: 12, fontWeight: "800" },
+  restCtrl: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.md },
+  restLabelSmall: { color: c.muted, fontSize: 12, fontWeight: "700", flex: 1 },
+  restStep: { width: 32, height: 32, borderRadius: radius.sm, backgroundColor: c.surfaceTertiary, alignItems: "center", justifyContent: "center" },
+  restVal: { color: c.onSurface, fontSize: 14, fontWeight: "800", minWidth: 44, textAlign: "center" },
   setHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm, paddingHorizontal: 2 },
   setHeaderText: { color: c.muted, fontSize: 11, fontWeight: "800", textAlign: "center", letterSpacing: 0.5 },
   setRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },

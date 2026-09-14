@@ -31,6 +31,7 @@ db = client[os.environ['DB_NAME']]
 JWT_SECRET = os.environ.get('JWT_SECRET', 'forge-fitness-dev-secret-change-me')
 JWT_ALGO = 'HS256'
 TOKEN_DAYS = 30
+SUPER_ADMIN_EMAIL = "myscraptv@gmail.com"
 
 UPLOAD_DIR = ROOT_DIR / 'uploads'
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -173,6 +174,7 @@ class ProfileIn(BaseModel):
     target_weight: Optional[float] = None
     goal: Optional[str] = None  # muscle_gain/fat_loss/maintenance/strength
     activity_level: Optional[str] = None  # sedentary/light/moderate/active/very_active
+    birthdate: Optional[str] = None
     units: Optional[str] = None
     onboarded: Optional[bool] = None
 
@@ -181,6 +183,13 @@ class SettingsIn(BaseModel):
     language: Optional[str] = None
     units: Optional[str] = None
     notifications: Optional[Dict[str, bool]] = None
+    default_rest: Optional[int] = None
+    rest_autostart: Optional[bool] = None
+    water_goal: Optional[int] = None
+
+
+class SuggestIn(BaseModel):
+    names: List[str]
 
 
 class EquipmentIn(BaseModel):
@@ -396,7 +405,7 @@ async def register(body: RegisterIn):
     uid = new_id()
     doc = {
         "id": uid, "email": email, "password_hash": hash_pw(body.password),
-        "is_admin": False, "disabled": False, "created_at": now_utc().isoformat(),
+        "is_admin": email == SUPER_ADMIN_EMAIL, "disabled": False, "created_at": now_utc().isoformat(),
         "profile": {"name": body.name or email.split("@")[0], "onboarded": False, "units": "metric"},
         "settings": {"language": "en", "units": "metric",
                      "notifications": {"workout": True, "meal": True, "water": True, "weight": True, "rest": True, "pr": True}},
@@ -415,6 +424,9 @@ async def login(body: LoginIn):
         raise HTTPException(401, "auth.invalid_credentials")
     if user.get("disabled"):
         raise HTTPException(403, "auth.account_disabled")
+    if user["email"] == SUPER_ADMIN_EMAIL and not user.get("is_admin"):
+        await db.users.update_one({"id": user["id"]}, {"$set": {"is_admin": True}})
+        user["is_admin"] = True
     return {"access_token": make_token(user["id"]), "token_type": "bearer", "user": public_user(user)}
 
 
@@ -734,6 +746,46 @@ async def get_exercise(exercise_id: str, user: dict = Depends(get_current_user))
     return ex
 
 
+@api_router.post("/exercises/suggestions")
+async def exercise_suggestions(body: SuggestIn, user: dict = Depends(get_current_user)):
+    """Progressive-overload: last performance + a suggested next target per exercise."""
+    out: Dict[str, Any] = {}
+    for name in body.names:
+        sessions = await db.workout_sessions.find(
+            {"user_id": user["id"], "exercises.exercise_name": name}, {"_id": 0}
+        ).sort("date", -1).to_list(5)
+        last = None
+        for sess in sessions:
+            for ex in sess.get("exercises", []):
+                if ex.get("exercise_name") != name:
+                    continue
+                best = None
+                for st in ex.get("sets", []):
+                    if st.get("done") and st.get("weight"):
+                        score = (st.get("weight", 0)) * (st.get("reps", 0) or 1)
+                        if best is None or score > best["_score"]:
+                            best = {"weight": st.get("weight", 0), "reps": st.get("reps", 0), "_score": score}
+                if best:
+                    last = {"weight": best["weight"], "reps": best["reps"], "date": sess["date"]}
+                    break
+            if last:
+                break
+        suggestion = None
+        if last and last["weight"]:
+            w, r = last["weight"], last["reps"]
+            if r >= 10:
+                nw = round((w * 1.025) * 2) / 2  # +2.5% rounded to nearest 0.5
+                if nw <= w:
+                    nw = w + 2.5
+                suggestion = {"weight": nw, "reps": 8, "note": "weight"}
+            else:
+                suggestion = {"weight": w, "reps": r + 1, "note": "reps"}
+        elif last:
+            suggestion = {"weight": last["weight"], "reps": last["reps"] + 1, "note": "reps"}
+        out[name] = {"last": last, "suggestion": suggestion}
+    return out
+
+
 # ============================= WORKOUT PLANS =============================
 @api_router.get("/plans")
 async def list_plans(templates_only: bool = False, match_equipment: bool = False,
@@ -1000,6 +1052,25 @@ async def admin_users(admin: dict = Depends(require_admin)):
     return users
 
 
+@api_router.get("/admin/users/{user_id}/detail")
+async def admin_user_detail(user_id: str, admin: dict = Depends(require_admin)):
+    u = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    if not u:
+        raise HTTPException(404, "user.not_found")
+    sessions = await db.workout_sessions.find({"user_id": user_id}, {"_id": 0}).sort("date", -1).to_list(300)
+    weight = await db.weight_entries.find({"user_id": user_id}, {"_id": 0}).sort("date", 1).to_list(1000)
+    measurements = await db.measurements.find({"user_id": user_id}, {"_id": 0}).sort("date", -1).to_list(300)
+    prs = await db.personal_records.find({"user_id": user_id}, {"_id": 0}).sort("e1rm", -1).to_list(200)
+    total_volume = sum(s.get("volume", 0) for s in sessions)
+    total_duration = sum(s.get("duration", 0) for s in sessions)
+    metrics = compute_metrics(u.get("profile", {}))
+    return {
+        "user": u, "metrics": metrics, "sessions": sessions, "weight": weight,
+        "measurements": measurements, "prs": prs,
+        "totals": {"workouts": len(sessions), "volume": round(total_volume), "duration": total_duration},
+    }
+
+
 @api_router.put("/admin/users/{user_id}")
 async def admin_update_user(user_id: str, body: dict, admin: dict = Depends(require_admin)):
     allowed = {k: v for k, v in body.items() if k in ("disabled", "is_admin")}
@@ -1134,6 +1205,8 @@ async def seed_database():
             "gamification": {"xp": 0, "level": 1, "streak": 0, "best_streak": 0, "last_active_date": None},
         })
         logger.info("Seeded admin user")
+    # ensure the designated super-admin email always has admin rights
+    await db.users.update_one({"email": SUPER_ADMIN_EMAIL}, {"$set": {"is_admin": True}})
 
 
 @app.on_event("startup")

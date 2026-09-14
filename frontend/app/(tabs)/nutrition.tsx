@@ -7,6 +7,7 @@ import { Plus, Trash, Drop, Barcode, ForkKnife, Minus } from "phosphor-react-nat
 
 import { apiFetch } from "@/src/api";
 import { queryClient } from "@/src/query-client";
+import { useAuth } from "@/src/auth";
 import { makeStyles, spacing, radius, useTheme } from "@/src/theme";
 import { Card, Loading, EmptyState } from "@/src/components/ui";
 import { MEALS } from "@/src/lib";
@@ -33,6 +34,7 @@ export default function Nutrition() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["diary", "today"],
@@ -55,7 +57,7 @@ export default function Nutrition() {
   const goals = metrics?.macros || { protein: 0, carbs: 0, fat: 0 };
   const calGoal = metrics?.calorie_target || 0;
   const water = data.water_ml || 0;
-  const waterGoal = 2500;
+  const waterGoal = user?.settings?.water_goal || 2500;
 
   return (
     <View style={s.root}>
