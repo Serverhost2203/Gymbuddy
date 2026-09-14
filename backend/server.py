@@ -1073,8 +1073,28 @@ async def admin_user_detail(user_id: str, admin: dict = Depends(require_admin)):
 
 @api_router.put("/admin/users/{user_id}")
 async def admin_update_user(user_id: str, body: dict, admin: dict = Depends(require_admin)):
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(404, "user.not_found")
+    # the super-admin account can never be demoted or disabled
+    if target["email"] == SUPER_ADMIN_EMAIL:
+        body.pop("is_admin", None)
+        body.pop("disabled", None)
     allowed = {k: v for k, v in body.items() if k in ("disabled", "is_admin")}
-    await db.users.update_one({"id": user_id}, {"$set": allowed})
+    if allowed:
+        await db.users.update_one({"id": user_id}, {"$set": allowed})
+    return await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+
+
+@api_router.put("/admin/users/{user_id}/profile")
+async def admin_update_user_profile(user_id: str, body: ProfileIn, admin: dict = Depends(require_admin)):
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(404, "user.not_found")
+    profile = target.get("profile", {})
+    updates = {k: v for k, v in body.dict().items() if v is not None}
+    profile.update(updates)
+    await db.users.update_one({"id": user_id}, {"$set": {"profile": profile}})
     return await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
 
 

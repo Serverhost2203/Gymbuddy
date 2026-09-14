@@ -60,3 +60,9 @@ Modern, premium dark fitness & gym app (Android + iOS). Progress-tracking focuse
 
 ## Iteration 5 (2026-06-14)
 - FIXED: Registration with myscraptv@gmail.com failed (409 email already registered) because a test account with that email had been created during testing. Deleted the leftover account; registration now works and auto-grants is_admin. Testing-agent verified + cleaned up so the real user can register their own password. Backend tests: 80/80 pass.
+
+## Iteration 6 (2026-06-14)
+- ADDED: Admin Panel user search (client-side filter by name/email).
+- ADDED: Admin can edit ALL of a user's profile data — PUT /api/admin/users/{id}/profile + Edit Profile sheet (name, birthdate, age, gender, height, weight, target, goal); metrics recompute.
+- ADDED: Super-admin protection — myscraptv@gmail.com cannot be self-demoted or disabled (backend strips those changes; frontend shows "Owner" badge, no toggle buttons).
+- Backend tests: 92/92 pass.

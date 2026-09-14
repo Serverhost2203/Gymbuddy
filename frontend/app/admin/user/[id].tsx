@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { CaretDown, Trophy } from "phosphor-react-native";
+import { CaretDown, Trophy, PencilSimple } from "phosphor-react-native";
 
 import { apiFetch } from "@/src/api";
+import { queryClient } from "@/src/query-client";
 import { makeStyles, spacing, radius, useTheme } from "@/src/theme";
-import { Header, Card, Loading } from "@/src/components/ui";
-import { shortDate } from "@/src/lib";
+import { Header, Card, Loading, Button, Input, ChipRow } from "@/src/components/ui";
+import { shortDate, clampNum } from "@/src/lib";
+
+const GENDERS = ["male", "female", "other"];
+const GOALS = ["muscle_gain", "fat_loss", "maintenance", "strength"];
 
 function dur(sec: number) {
   if (!sec) return "—";
@@ -26,8 +31,44 @@ export default function AdminUserDetail() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [open, setOpen] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<Record<string, string>>({});
 
   const { data, isLoading } = useQuery({ queryKey: ["admin-user", id], queryFn: () => apiFetch(`/admin/users/${id}/detail`) });
+
+  const editMut = useMutation({
+    mutationFn: () =>
+      apiFetch(`/admin/users/${id}/profile`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: form.name,
+          birthdate: form.birthdate,
+          age: parseInt(form.age) || undefined,
+          gender: form.gender,
+          height: clampNum(form.height) || undefined,
+          weight: clampNum(form.weight) || undefined,
+          target_weight: clampNum(form.target_weight) || undefined,
+          goal: form.goal,
+        }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setEditing(false);
+    },
+  });
+
+  const openEdit = () => {
+    const p = data.user.profile || {};
+    setForm({
+      name: p.name || "", birthdate: p.birthdate || "", age: p.age ? String(p.age) : "",
+      gender: p.gender || "male", height: p.height ? String(p.height) : "",
+      weight: p.weight ? String(p.weight) : "", target_weight: p.target_weight ? String(p.target_weight) : "",
+      goal: p.goal || "maintenance",
+    });
+    setEditing(true);
+  };
+
   if (isLoading || !data) return <Loading />;
 
   const p = data.user.profile || {};
@@ -48,7 +89,7 @@ export default function AdminUserDetail() {
 
   return (
     <View style={s.root}>
-      <Header title={p.name || data.user.email} onBack={() => router.back()} />
+      <Header title={p.name || data.user.email} onBack={() => router.back()} right={<Pressable testID="edit-user" onPress={openEdit}><PencilSimple color={colors.brandPrimary} size={22} weight="fill" /></Pressable>} />
       <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + spacing.xl, gap: spacing.md }}>
         {/* Totals */}
         <View style={s.totalsRow}>
@@ -126,6 +167,30 @@ export default function AdminUserDetail() {
           </Card>
         )}
       </ScrollView>
+
+      {editing && (
+        <View style={s.overlay}>
+          <Pressable style={s.overlayBg} onPress={() => setEditing(false)} />
+          <KeyboardAwareScrollView bottomOffset={20} style={s.sheetScroll} contentContainerStyle={[s.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+            <Text style={s.sheetTitle}>{t("profile.editProfile")}</Text>
+            <Input testID="au-name" label={t("auth.name")} value={form.name} onChangeText={(v) => setForm({ ...form, name: v })} />
+            <Input testID="au-birthdate" label="Geb. (YYYY-MM-DD)" value={form.birthdate} onChangeText={(v) => setForm({ ...form, birthdate: v })} placeholder="1995-06-15" />
+            <View style={s.two}>
+              <Input testID="au-age" style={s.col} label={t("onboarding.age")} value={form.age} onChangeText={(v) => setForm({ ...form, age: v })} keyboardType="numeric" />
+              <Input testID="au-height" style={s.col} label={t("onboarding.height")} value={form.height} onChangeText={(v) => setForm({ ...form, height: v })} keyboardType="numeric" />
+            </View>
+            <View style={s.two}>
+              <Input testID="au-weight" style={s.col} label={t("onboarding.weight")} value={form.weight} onChangeText={(v) => setForm({ ...form, weight: v })} keyboardType="numeric" />
+              <Input testID="au-target" style={s.col} label={t("onboarding.targetWeight")} value={form.target_weight} onChangeText={(v) => setForm({ ...form, target_weight: v })} keyboardType="numeric" />
+            </View>
+            <Text style={s.formLabel}>{t("onboarding.gender")}</Text>
+            <ChipRow items={GENDERS.map((g) => ({ key: g, label: t(`onboarding.${g}`) }))} selected={form.gender} onSelect={(v) => setForm({ ...form, gender: v })} />
+            <Text style={s.formLabel}>{t("onboarding.goal")}</Text>
+            <ChipRow items={GOALS.map((g) => ({ key: g, label: t(`goal.${g}`) }))} selected={form.goal} onSelect={(v) => setForm({ ...form, goal: v })} />
+            <Button testID="au-save" label={t("common.save")} onPress={() => editMut.mutate()} loading={editMut.isPending} style={{ marginTop: spacing.md }} />
+          </KeyboardAwareScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -151,4 +216,12 @@ const useStyles = makeStyles((c) => ({
   prRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: c.divider },
   prName: { color: c.onSurface, fontSize: 14, fontWeight: "700", flex: 1 },
   prVal: { color: c.brandPrimary, fontSize: 14, fontWeight: "800" },
+  overlay: { ...({ position: "absolute" } as any), top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" },
+  overlayBg: { ...({ position: "absolute" } as any), top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)" },
+  sheetScroll: { maxHeight: "90%" },
+  sheet: { backgroundColor: c.surfaceSecondary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, gap: spacing.md, borderTopWidth: 1, borderColor: c.border },
+  sheetTitle: { color: c.onSurface, fontSize: 20, fontWeight: "800" },
+  two: { flexDirection: "row", gap: spacing.md },
+  col: { flex: 1 },
+  formLabel: { color: c.onSurfaceTertiary, fontSize: 13, fontWeight: "700" },
 }));

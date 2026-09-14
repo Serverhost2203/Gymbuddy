@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, FlatList } from "react-native";
+import { View, Text, ScrollView, Pressable, FlatList, TextInput } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash, PencilSimple } from "phosphor-react-native";
+import { Plus, Trash, PencilSimple, MagnifyingGlass, ShieldStar } from "phosphor-react-native";
 
-import { apiFetch } from "@/src/api";
+import { apiFetch, SUPER_ADMIN_EMAIL } from "@/src/api";
 import { queryClient } from "@/src/query-client";
 import { makeStyles, spacing, radius, useTheme } from "@/src/theme";
 import { Header, Card, Loading, ChipRow, Button, Input } from "@/src/components/ui";
@@ -47,6 +47,7 @@ export default function Admin() {
   const [view, setView] = useState("stats");
   const [editing, setEditing] = useState<any | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [userSearch, setUserSearch] = useState("");
 
   const statsQ = useQuery({ queryKey: ["admin-stats"], queryFn: () => apiFetch("/admin/stats") });
   const usersQ = useQuery({ queryKey: ["admin-users"], queryFn: () => apiFetch<any[]>("/admin/users"), enabled: view === "users" });
@@ -137,25 +138,53 @@ export default function Admin() {
       )}
 
       {view === "users" && (
-        <FlatList
-          data={usersQ.data || []}
-          keyExtractor={(u) => u.id}
-          contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + spacing.xl, gap: spacing.sm }}
-          renderItem={({ item: u }) => (
-            <Card testID={`admin-user-${u.id}`} style={s.userRow}>
-              <Pressable testID={`open-user-${u.id}`} style={{ flex: 1 }} onPress={() => router.push(`/admin/user/${u.id}`)}>
-                <Text style={s.userEmail} numberOfLines={1}>{u.email}</Text>
-                <Text style={s.userMeta}>{u.profile?.name || "—"}{u.is_admin ? " · admin" : ""}{u.disabled ? " · disabled" : ""}</Text>
-              </Pressable>
-              <Pressable testID={`toggle-disable-${u.id}`} onPress={() => userMut.mutate({ id: u.id, body: { disabled: !u.disabled } })} style={[s.miniBtn, { borderColor: u.disabled ? colors.success : colors.error }]}>
-                <Text style={[s.miniBtnText, { color: u.disabled ? colors.success : colors.error }]}>{u.disabled ? t("admin.enable") : t("admin.disable")}</Text>
-              </Pressable>
-              <Pressable testID={`toggle-admin-${u.id}`} onPress={() => userMut.mutate({ id: u.id, body: { is_admin: !u.is_admin } })} style={[s.miniBtn, { borderColor: colors.brandPrimary }]}>
-                <Text style={[s.miniBtnText, { color: colors.brandPrimary }]}>{u.is_admin ? t("admin.removeAdmin") : t("admin.makeAdmin")}</Text>
-              </Pressable>
-            </Card>
-          )}
-        />
+        <View style={{ flex: 1 }}>
+          <View style={s.searchWrap}>
+            <MagnifyingGlass color={colors.muted} size={18} />
+            <TextInput
+              testID="user-search"
+              value={userSearch}
+              onChangeText={setUserSearch}
+              placeholder={`${t("common.search")}…`}
+              placeholderTextColor={colors.muted}
+              autoCapitalize="none"
+              style={s.searchInput}
+            />
+          </View>
+          <FlatList
+            data={(usersQ.data || []).filter((u) => {
+              const q = userSearch.trim().toLowerCase();
+              if (!q) return true;
+              return (u.email || "").toLowerCase().includes(q) || (u.profile?.name || "").toLowerCase().includes(q);
+            })}
+            keyExtractor={(u) => u.id}
+            contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + spacing.xl, gap: spacing.sm }}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item: u }) => {
+              const isOwner = u.email === SUPER_ADMIN_EMAIL;
+              return (
+                <Card testID={`admin-user-${u.id}`} style={s.userRow}>
+                  <Pressable testID={`open-user-${u.id}`} style={{ flex: 1 }} onPress={() => router.push(`/admin/user/${u.id}`)}>
+                    <Text style={s.userEmail} numberOfLines={1}>{u.email}</Text>
+                    <Text style={s.userMeta}>{u.profile?.name || "—"}{u.is_admin ? " · admin" : ""}{u.disabled ? " · disabled" : ""}</Text>
+                  </Pressable>
+                  {isOwner ? (
+                    <View style={s.ownerBadge}><ShieldStar color={colors.warning} size={14} weight="fill" /><Text style={s.ownerText}>Owner</Text></View>
+                  ) : (
+                    <>
+                      <Pressable testID={`toggle-disable-${u.id}`} onPress={() => userMut.mutate({ id: u.id, body: { disabled: !u.disabled } })} style={[s.miniBtn, { borderColor: u.disabled ? colors.success : colors.error }]}>
+                        <Text style={[s.miniBtnText, { color: u.disabled ? colors.success : colors.error }]}>{u.disabled ? t("admin.enable") : t("admin.disable")}</Text>
+                      </Pressable>
+                      <Pressable testID={`toggle-admin-${u.id}`} onPress={() => userMut.mutate({ id: u.id, body: { is_admin: !u.is_admin } })} style={[s.miniBtn, { borderColor: colors.brandPrimary }]}>
+                        <Text style={[s.miniBtnText, { color: colors.brandPrimary }]}>{u.is_admin ? t("admin.removeAdmin") : t("admin.makeAdmin")}</Text>
+                      </Pressable>
+                    </>
+                  )}
+                </Card>
+              );
+            }}
+          />
+        </View>
       )}
 
       {["exercises", "foods", "achievements"].includes(view) && (
@@ -206,6 +235,10 @@ const useStyles = makeStyles((c) => ({
   statNum: { color: c.brandPrimary, fontSize: 26, fontWeight: "900" },
   statLbl: { color: c.muted, fontSize: 12, fontWeight: "600" },
   userRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginHorizontal: spacing.lg, marginBottom: spacing.sm, paddingHorizontal: spacing.md, height: 46, borderRadius: radius.md, backgroundColor: c.surfaceSecondary, borderWidth: 1, borderColor: c.border },
+  searchInput: { flex: 1, color: c.onSurface, fontSize: 15, height: 46 },
+  ownerBadge: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.brandTertiary, paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.sm },
+  ownerText: { color: c.warning, fontSize: 11, fontWeight: "800" },
   userEmail: { color: c.onSurface, fontSize: 14, fontWeight: "700" },
   userMeta: { color: c.muted, fontSize: 12 },
   miniBtn: { paddingHorizontal: spacing.sm, paddingVertical: 6, borderRadius: radius.sm, borderWidth: 1 },

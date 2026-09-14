@@ -1,0 +1,38 @@
+{
+  "summary": "Backend-only iter7: verified the two new admin features + protection + full regression. NEW FILE tests/test_admin_profile_edit_and_super_protection.py (12 tests, all PASS). FEATURE PUT /api/admin/users/{id}/profile: 401 no token, 403 non-admin, 404 unknown user, admin updates ALL profile fields (name/birthdate/age/gender/height/weight/target_weight/goal), values persist and are visible via GET /admin/users/{id}/detail, metrics (bmi/calorie_target) recompute correctly after height/weight change (BMI 65/1.7^2 ~22.49 and 90/1.55^2 ~37.46 both matched to <0.1 tolerance; calorie_target changed too), partial update preserves prior fields. PROTECTION on super-admin (myscraptv@gmail.com): PUT /admin/users/{sid} {is_admin:false} -> account remains is_admin=true; {disabled:true} -> stays disabled=false; combined {is_admin:false, disabled:true} -> both changes ignored; GET /admin/users confirms the super-admin still is_admin=true & not disabled. REGRESSION on normal users: is_admin true<->false toggle works; disabled true<->false toggle works. FULL SUITE regression (non-parallel): 92/92 PASSED across 6 test files (test_admin_content_and_foods 16, test_admin_profile_edit_and_super_protection 12 new, test_forge_backend 32, test_progressive_and_settings 16, test_registration_verify 4, test_super_admin_and_detail 12). MANDATORY CLEANUP DONE: db.users.delete_many({email:'myscraptv@gmail.com'}) deleted_count=1, post-check find_one=None, public POST /api/auth/login returns 401 — real end-user can now register their own account.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_profile_edit_and_super_protection.py",
+    "/app/test_reports/pytest/iter7_full.xml"
+  ],
+  "action_items": [
+    "None blocking — both new features verified end-to-end and super-admin cleanup completed.",
+    "Optional (carried over): move SUPER_ADMIN_EMAIL from hardcoded constant (server.py:34) to env var; server.py > 1200 lines — consider splitting into routers."
+  ],
+  "critical_code_review_comments": [
+    "PUT /admin/users/{user_id}/profile (server.py:1089-1098): correctly requires admin, 404s missing user, merges only non-None ProfileIn fields into user.profile, returns user without password_hash. Metrics recompute lazily via compute_metrics() in /admin/users/{id}/detail (server.py:1066) so no extra work needed on update. Behaviour verified.",
+    "PUT /admin/users/{user_id} (server.py:1074-1086): correctly strips is_admin & disabled from body when target.email == SUPER_ADMIN_EMAIL; also 404s missing user; only whitelists {disabled,is_admin} keys — good defensive filter.",
+    "SUPER_ADMIN_EMAIL still hardcoded (server.py:34) — recommend env var for portability.",
+    "server.py > 1200 lines — split into routers/modules for maintainability (unchanged from prior iterations)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_profile_edit_and_super_protection.py (new — 12 tests: admin profile edit feature, super-admin protection, normal-user toggle regression; module-scoped autouse fixture cleans super-admin from Mongo before AND after so file is idempotent and safe in full suite)"
+  ],
+  "success_rate": {
+    "backend": "100% (92/92 full suite; 12/12 new tests)",
+    "frontend": "not tested (backend-only iteration as requested)"
+  },
+  "seed_data_creation": "Temporarily registered myscraptv@gmail.com/super123 during tests (via module fixture). MANDATORY CLEANUP COMPLETED: deleted via db.users.delete_many, deleted_count=1, post-check find_one=None, public /api/auth/login returns 401. Ephemeral TEST_ users (edit target, other normal user, detail target) remain but are namespaced and harmless.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "myscraptv@gmail.com is currently DELETED from the users collection. Any test that needs the super-admin must register it fresh (fixtures in test_super_admin_and_detail.py and test_admin_profile_edit_and_super_protection.py already do this with pw 'super123'). Full suite is 92 tests, non-parallel, ~25s: cd /app/backend && python -m pytest tests/ -o addopts=''. The new endpoint under test is PUT /api/admin/users/{id}/profile (require_admin) — merges ProfileIn (non-None fields) into user.profile."
+}

@@ -1,6 +1,7 @@
 import { storage } from "@/src/utils/storage";
 
 export const API_BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
+export const SUPER_ADMIN_EMAIL = "myscraptv@gmail.com";
 const TOKEN_KEY = "forge.token";
 
 export async function getToken(): Promise<string | null> {
