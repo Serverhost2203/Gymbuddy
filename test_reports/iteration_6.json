@@ -1,0 +1,38 @@
+{
+  "summary": "Backend-only iteration 6: verified the registration bug fix for myscraptv@gmail.com. Pre-check confirmed the leftover test account was deleted from MongoDB (NOT FOUND). New test file test_registration_verify.py (4 tests) verified: (1) POST /api/auth/register with myscraptv@gmail.com/TmpVerify123 returns 200 with access_token and user.is_admin=true (SUPER_ADMIN auto-grant) — NOT the previous 409 auth.email_unavailable; (2) POST /api/auth/login works and returns is_admin=true; (3) GET /api/auth/me with the bearer token returns the profile (email + is_admin=true); (4) a duplicate register correctly returns 409 auth.email_unavailable — proving the original bug was the leftover test account. First full-suite run exposed a test-isolation issue in MY OWN new test file (left the account registered, causing 2 failures + 4 skips in the super-admin module); fixed by adding a module-scoped autouse fixture that deletes the account from Mongo before AND after the module — not an app bug. Final regression: 80/80 passed, 0 skipped, 0 failed. MANDATORY CLEANUP DONE: db.users.deleteMany({email:'myscraptv@gmail.com'}) deleted 1 doc (recreated by the regression suite's super-admin fixture), post-delete Mongo find_one returns NOT FOUND, and public API login for that email now returns 401 — the real user can register fresh with their own password.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_registration_verify.py",
+    "/app/test_reports/pytest/iter6_registration_verify.xml",
+    "/app/test_reports/pytest/iter6_full.xml"
+  ],
+  "action_items": [
+    "None blocking. Registration for myscraptv@gmail.com is confirmed working and the verification account has been deleted — the real user can self-register.",
+    "Optional (carried over): move SUPER_ADMIN_EMAIL from hardcoded constant to an env var."
+  ],
+  "critical_code_review_comments": [
+    "Register (server.py:400-408) correctly returns 409 auth.email_unavailable on duplicate email and auto-grants is_admin for SUPER_ADMIN_EMAIL (line 408); startup task (line 1209) re-affirms the flag. Behaviour verified end-to-end.",
+    "Previously noted: server.py >1200 lines — consider splitting into routers; SUPER_ADMIN_EMAIL hardcoded at server.py:34."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_registration_verify.py (new — register/login/me/duplicate-409 verification with Mongo clean-slate fixture)"
+  ],
+  "success_rate": {
+    "backend": "100% (80/80 full suite, incl. 4 new registration-verify tests)",
+    "frontend": "not tested (backend-only iteration)"
+  },
+  "seed_data_creation": "Temporarily registered myscraptv@gmail.com/TmpVerify123 for verification only. MANDATORY CLEANUP COMPLETED: account deleted via db.users.deleteMany (deleted_count=1); confirmed gone via Mongo find_one (NOT FOUND) and public API (POST /api/auth/login now returns 401). The real user can register their own account with their own password.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Registration bug RESOLVED and account cleaned up. myscraptv@gmail.com currently does NOT exist in the DB — any test that needs the super-admin must register it first (fixture in test_super_admin_and_detail.py does this: register 'super123', fallback login). test_registration_verify.py has a module-scoped autouse fixture that deletes the email from Mongo before/after itself, so it is idempotent and safe in the full suite. Run non-parallel: cd /app/backend && python -m pytest tests/ -q -o addopts='' . Full suite now 80 tests.",
+  "rca_of_issue": "ORIGINAL BUG RCA: user got 'email already registered' (409 auth.email_unavailable) because a leftover test account with myscraptv@gmail.com existed in the users collection from earlier testing iterations. Mitigation: document deleted from Mongo; verified register returns 200 + access_token + is_admin=true, duplicate register correctly returns 409 (endpoint behaviour is correct — it was purely a data leftover issue). Cleanup re-applied after verification so the real user can register with their own password."
+}

@@ -57,3 +57,6 @@ Modern, premium dark fitness & gym app (Android + iOS). Progress-tracking focuse
 - ADDED: Admin Panel user-detail — GET /api/admin/users/{id}/detail returns profile (incl. birthdate/Geb.), computed BMI/calories, full training history (date, name, duration, volume, sets, per-set weights & reps), PRs, weight history, totals. New screen app/admin/user/[id].tsx; user rows in admin are tappable. Access limited to admins (401/403 otherwise).
 - ADDED: birthdate field in profile editor.
 - Backend tests: 76/76 pass.
+
+## Iteration 5 (2026-06-14)
+- FIXED: Registration with myscraptv@gmail.com failed (409 email already registered) because a test account with that email had been created during testing. Deleted the leftover account; registration now works and auto-grants is_admin. Testing-agent verified + cleaned up so the real user can register their own password. Backend tests: 80/80 pass.
