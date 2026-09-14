@@ -1,0 +1,213 @@
+"""Seed data for Forge Fitness: exercises, foods, workout plan templates,
+achievements and equipment. Idempotent — keyed by stable 'code'/'name'."""
+
+EQUIPMENT = [
+    {"code": "barbell", "name": "Barbell", "icon": "Barbell"},
+    {"code": "dumbbells", "name": "Dumbbells", "icon": "Barbell"},
+    {"code": "cable", "name": "Cable Machine", "icon": "GridFour"},
+    {"code": "smith", "name": "Smith Machine", "icon": "GridFour"},
+    {"code": "bench", "name": "Bench", "icon": "ArmchairIcon"},
+    {"code": "squat_rack", "name": "Squat Rack", "icon": "GridFour"},
+    {"code": "leg_press", "name": "Leg Press", "icon": "GridFour"},
+    {"code": "machines", "name": "Machines", "icon": "GridFour"},
+    {"code": "pullup_bar", "name": "Pull-up Bar", "icon": "Minus"},
+    {"code": "bands", "name": "Resistance Bands", "icon": "Waves"},
+    {"code": "cardio", "name": "Cardio Equipment", "icon": "Heartbeat"},
+    {"code": "bodyweight", "name": "Bodyweight", "icon": "PersonSimple"},
+]
+
+MUSCLE_GROUPS = [
+    {"code": "chest", "name": "Chest"},
+    {"code": "back", "name": "Back"},
+    {"code": "shoulders", "name": "Shoulders"},
+    {"code": "biceps", "name": "Biceps"},
+    {"code": "triceps", "name": "Triceps"},
+    {"code": "legs", "name": "Legs"},
+    {"code": "glutes", "name": "Glutes"},
+    {"code": "core", "name": "Core"},
+    {"code": "cardio", "name": "Cardio"},
+]
+
+# name, muscle_group, equipment[], instructions
+EXERCISES = [
+    # Chest
+    ("Barbell Bench Press", "chest", ["barbell", "bench"], "Lie flat, grip slightly wider than shoulders, lower to mid-chest and press up."),
+    ("Incline Dumbbell Press", "chest", ["dumbbells", "bench"], "Set bench to 30°, press dumbbells from shoulder level to lockout."),
+    ("Dumbbell Fly", "chest", ["dumbbells", "bench"], "Wide arc with slight elbow bend, squeeze chest at top."),
+    ("Cable Crossover", "chest", ["cable"], "Pull handles down and across, squeezing chest at the midline."),
+    ("Push-up", "chest", ["bodyweight"], "Keep body straight, lower chest to floor, press back up."),
+    ("Machine Chest Press", "chest", ["machines"], "Adjust seat so handles align mid-chest, press forward."),
+    # Back
+    ("Deadlift", "back", ["barbell"], "Hinge at hips, flat back, drive through heels to stand tall."),
+    ("Pull-up", "back", ["pullup_bar"], "Hang with overhand grip, pull chin over the bar."),
+    ("Bent-over Barbell Row", "back", ["barbell"], "Hinge forward 45°, row bar to lower ribs, control down."),
+    ("Lat Pulldown", "back", ["cable", "machines"], "Pull bar to upper chest, drive elbows down and back."),
+    ("Seated Cable Row", "back", ["cable"], "Pull handle to torso, squeeze shoulder blades together."),
+    ("Dumbbell Row", "back", ["dumbbells", "bench"], "One knee on bench, row dumbbell to hip."),
+    # Shoulders
+    ("Overhead Press", "shoulders", ["barbell"], "Press bar from shoulders to overhead, keep core tight."),
+    ("Dumbbell Shoulder Press", "shoulders", ["dumbbells", "bench"], "Press dumbbells from ear level to lockout."),
+    ("Lateral Raise", "shoulders", ["dumbbells"], "Raise dumbbells to shoulder height with slight bend."),
+    ("Face Pull", "shoulders", ["cable"], "Pull rope to face, externally rotate shoulders."),
+    ("Rear Delt Fly", "shoulders", ["dumbbells"], "Hinge forward, raise dumbbells out to the sides."),
+    # Biceps
+    ("Barbell Curl", "biceps", ["barbell"], "Curl bar keeping elbows pinned to sides."),
+    ("Dumbbell Curl", "biceps", ["dumbbells"], "Alternate curling dumbbells, supinate wrist."),
+    ("Hammer Curl", "biceps", ["dumbbells"], "Neutral grip curl targeting brachialis."),
+    ("Cable Curl", "biceps", ["cable"], "Curl handle with constant cable tension."),
+    # Triceps
+    ("Tricep Pushdown", "triceps", ["cable"], "Push rope down to lockout, squeeze triceps."),
+    ("Overhead Tricep Extension", "triceps", ["dumbbells"], "Extend dumbbell overhead, keep elbows in."),
+    ("Close-grip Bench Press", "triceps", ["barbell", "bench"], "Narrow grip, press focusing on triceps."),
+    ("Dips", "triceps", ["bodyweight"], "Lower body between bars, press back to lockout."),
+    # Legs
+    ("Barbell Back Squat", "legs", ["barbell", "squat_rack"], "Bar on upper back, squat to parallel, drive up."),
+    ("Leg Press", "legs", ["leg_press"], "Press platform away, don't lock knees."),
+    ("Romanian Deadlift", "legs", ["barbell"], "Hinge at hips, slight knee bend, feel hamstring stretch."),
+    ("Leg Extension", "legs", ["machines"], "Extend knees fully, squeeze quads at top."),
+    ("Leg Curl", "legs", ["machines"], "Curl heels toward glutes, control the return."),
+    ("Walking Lunge", "legs", ["dumbbells", "bodyweight"], "Step forward, lower back knee, alternate legs."),
+    ("Goblet Squat", "legs", ["dumbbells"], "Hold dumbbell at chest, squat deep."),
+    # Glutes
+    ("Hip Thrust", "glutes", ["barbell", "bench"], "Bar on hips, drive hips up, squeeze glutes."),
+    ("Bulgarian Split Squat", "glutes", ["dumbbells", "bench"], "Rear foot elevated, lower and drive up."),
+    ("Cable Kickback", "glutes", ["cable"], "Kick leg back, squeeze glute at top."),
+    # Core
+    ("Plank", "core", ["bodyweight"], "Hold straight body on forearms, brace core."),
+    ("Hanging Leg Raise", "core", ["pullup_bar"], "Raise legs to hip height, control down."),
+    ("Cable Crunch", "core", ["cable"], "Kneel, crunch torso toward knees."),
+    ("Russian Twist", "core", ["bodyweight"], "Rotate torso side to side, feet elevated."),
+    # Cardio
+    ("Treadmill Run", "cardio", ["cardio"], "Steady or interval running on treadmill."),
+    ("Rowing Machine", "cardio", ["cardio"], "Drive with legs, pull handle to sternum."),
+    ("Jump Rope", "cardio", ["bodyweight"], "Continuous skipping, light on feet."),
+    ("Cycling", "cardio", ["cardio"], "Steady state or interval cycling."),
+]
+
+# name, brand, per(100g default), calories, protein, carbs, fat
+FOODS = [
+    ("Chicken Breast", "Generic", 165, 31, 0, 3.6),
+    ("White Rice (cooked)", "Generic", 130, 2.7, 28, 0.3),
+    ("Brown Rice (cooked)", "Generic", 112, 2.6, 24, 0.9),
+    ("Whole Egg", "Generic", 155, 13, 1.1, 11),
+    ("Egg White", "Generic", 52, 11, 0.7, 0.2),
+    ("Rolled Oats", "Generic", 389, 17, 66, 7),
+    ("Banana", "Generic", 89, 1.1, 23, 0.3),
+    ("Apple", "Generic", 52, 0.3, 14, 0.2),
+    ("Greek Yogurt (0%)", "Generic", 59, 10, 3.6, 0.4),
+    ("Whey Protein", "Generic", 400, 80, 8, 6),
+    ("Almonds", "Generic", 579, 21, 22, 50),
+    ("Peanut Butter", "Generic", 588, 25, 20, 50),
+    ("Salmon", "Generic", 208, 20, 0, 13),
+    ("Tuna (canned in water)", "Generic", 116, 26, 0, 1),
+    ("Ground Beef (85/15)", "Generic", 250, 26, 0, 15),
+    ("Sweet Potato", "Generic", 86, 1.6, 20, 0.1),
+    ("Broccoli", "Generic", 34, 2.8, 7, 0.4),
+    ("Avocado", "Generic", 160, 2, 9, 15),
+    ("Whole Wheat Bread", "Generic", 247, 13, 41, 3.4),
+    ("Pasta (cooked)", "Generic", 131, 5, 25, 1.1),
+    ("Cottage Cheese", "Generic", 98, 11, 3.4, 4.3),
+    ("Milk (2%)", "Generic", 50, 3.4, 4.8, 2),
+    ("Olive Oil", "Generic", 884, 0, 0, 100),
+    ("Cheddar Cheese", "Generic", 402, 25, 1.3, 33),
+    ("Lentils (cooked)", "Generic", 116, 9, 20, 0.4),
+    ("Quinoa (cooked)", "Generic", 120, 4.4, 21, 1.9),
+    ("Protein Bar", "Generic", 350, 30, 35, 10),
+    ("Orange", "Generic", 47, 0.9, 12, 0.1),
+    ("Spinach", "Generic", 23, 2.9, 3.6, 0.4),
+    ("Turkey Breast", "Generic", 135, 30, 0, 1),
+]
+
+# Workout plan templates: name, level, goal, split, days
+def _ex(name, sets, reps, rest):
+    return {"exercise_name": name, "sets": sets, "reps": reps, "weight": 0, "rest": rest}
+
+WORKOUT_PLANS = [
+    {
+        "name": "Full Body Foundations",
+        "level": "beginner", "goal": "general_fitness", "split": "full_body",
+        "description": "3x/week full-body plan to build a base of strength.",
+        "required_equipment": ["barbell", "dumbbells", "bench", "squat_rack"],
+        "days": [
+            {"name": "Day A", "exercises": [_ex("Barbell Back Squat", 3, "8-10", 120), _ex("Barbell Bench Press", 3, "8-10", 120), _ex("Bent-over Barbell Row", 3, "8-10", 120), _ex("Plank", 3, "45s", 60)]},
+            {"name": "Day B", "exercises": [_ex("Romanian Deadlift", 3, "8-10", 120), _ex("Overhead Press", 3, "8-10", 120), _ex("Lat Pulldown", 3, "10-12", 90), _ex("Hanging Leg Raise", 3, "12-15", 60)]},
+            {"name": "Day C", "exercises": [_ex("Leg Press", 3, "10-12", 120), _ex("Incline Dumbbell Press", 3, "10-12", 90), _ex("Seated Cable Row", 3, "10-12", 90), _ex("Cable Crunch", 3, "15", 60)]},
+        ],
+    },
+    {
+        "name": "Push Pull Legs",
+        "level": "intermediate", "goal": "muscle_building", "split": "ppl",
+        "description": "Classic 6-day PPL for hypertrophy.",
+        "required_equipment": ["barbell", "dumbbells", "cable", "bench", "squat_rack"],
+        "days": [
+            {"name": "Push", "exercises": [_ex("Barbell Bench Press", 4, "6-8", 150), _ex("Overhead Press", 3, "8-10", 120), _ex("Incline Dumbbell Press", 3, "10-12", 90), _ex("Lateral Raise", 3, "12-15", 60), _ex("Tricep Pushdown", 3, "12-15", 60)]},
+            {"name": "Pull", "exercises": [_ex("Deadlift", 3, "5", 180), _ex("Pull-up", 3, "8-10", 120), _ex("Seated Cable Row", 3, "10-12", 90), _ex("Face Pull", 3, "15", 60), _ex("Barbell Curl", 3, "10-12", 60)]},
+            {"name": "Legs", "exercises": [_ex("Barbell Back Squat", 4, "6-8", 180), _ex("Romanian Deadlift", 3, "8-10", 120), _ex("Leg Press", 3, "12", 120), _ex("Leg Curl", 3, "12-15", 60), _ex("Plank", 3, "60s", 60)]},
+        ],
+    },
+    {
+        "name": "Upper / Lower Power",
+        "level": "intermediate", "goal": "strength", "split": "upper_lower",
+        "description": "4-day upper/lower split focused on strength.",
+        "required_equipment": ["barbell", "dumbbells", "bench", "squat_rack"],
+        "days": [
+            {"name": "Upper A", "exercises": [_ex("Barbell Bench Press", 4, "5", 180), _ex("Bent-over Barbell Row", 4, "5", 180), _ex("Overhead Press", 3, "6-8", 120), _ex("Dumbbell Curl", 3, "10", 60)]},
+            {"name": "Lower A", "exercises": [_ex("Barbell Back Squat", 4, "5", 180), _ex("Romanian Deadlift", 3, "6-8", 150), _ex("Leg Press", 3, "10", 120), _ex("Hanging Leg Raise", 3, "12", 60)]},
+            {"name": "Upper B", "exercises": [_ex("Overhead Press", 4, "5", 180), _ex("Pull-up", 4, "6-8", 120), _ex("Incline Dumbbell Press", 3, "8-10", 120), _ex("Tricep Pushdown", 3, "12", 60)]},
+            {"name": "Lower B", "exercises": [_ex("Deadlift", 4, "5", 180), _ex("Walking Lunge", 3, "12", 90), _ex("Leg Curl", 3, "12", 60), _ex("Cable Crunch", 3, "15", 60)]},
+        ],
+    },
+    {
+        "name": "Lean & Shred",
+        "level": "intermediate", "goal": "fat_loss", "split": "full_body",
+        "description": "High-density circuits to burn fat and retain muscle.",
+        "required_equipment": ["dumbbells", "cardio", "bodyweight"],
+        "days": [
+            {"name": "Circuit A", "exercises": [_ex("Goblet Squat", 4, "15", 45), _ex("Push-up", 4, "15", 45), _ex("Dumbbell Row", 4, "12", 45), _ex("Jump Rope", 4, "60s", 30)]},
+            {"name": "Circuit B", "exercises": [_ex("Walking Lunge", 4, "20", 45), _ex("Dumbbell Shoulder Press", 4, "12", 45), _ex("Russian Twist", 4, "30", 30), _ex("Rowing Machine", 3, "300m", 60)]},
+            {"name": "Conditioning", "exercises": [_ex("Treadmill Run", 1, "20min", 0), _ex("Plank", 3, "60s", 45), _ex("Hanging Leg Raise", 3, "15", 45)]},
+        ],
+    },
+    {
+        "name": "Home Bodyweight Builder",
+        "level": "beginner", "goal": "general_fitness", "split": "full_body",
+        "description": "No equipment needed — train anywhere.",
+        "required_equipment": ["bodyweight"],
+        "days": [
+            {"name": "Full Body A", "exercises": [_ex("Push-up", 4, "12-15", 60), _ex("Goblet Squat", 4, "15", 60), _ex("Plank", 3, "45s", 45), _ex("Russian Twist", 3, "30", 45)]},
+            {"name": "Full Body B", "exercises": [_ex("Walking Lunge", 4, "20", 60), _ex("Dips", 3, "10-12", 60), _ex("Jump Rope", 4, "60s", 30), _ex("Hanging Leg Raise", 3, "12", 45)]},
+        ],
+    },
+    {
+        "name": "Advanced Hypertrophy",
+        "level": "advanced", "goal": "muscle_building", "split": "ppl",
+        "description": "High-volume PPL for advanced lifters.",
+        "required_equipment": ["barbell", "dumbbells", "cable", "machines", "bench", "squat_rack"],
+        "days": [
+            {"name": "Push", "exercises": [_ex("Barbell Bench Press", 5, "8", 120), _ex("Incline Dumbbell Press", 4, "10", 90), _ex("Machine Chest Press", 3, "12", 75), _ex("Lateral Raise", 4, "15", 45), _ex("Overhead Tricep Extension", 4, "12", 60), _ex("Tricep Pushdown", 3, "15", 45)]},
+            {"name": "Pull", "exercises": [_ex("Deadlift", 4, "6", 180), _ex("Pull-up", 4, "10", 90), _ex("Seated Cable Row", 4, "12", 75), _ex("Rear Delt Fly", 3, "15", 45), _ex("Barbell Curl", 4, "10", 60), _ex("Hammer Curl", 3, "12", 45)]},
+            {"name": "Legs", "exercises": [_ex("Barbell Back Squat", 5, "8", 150), _ex("Romanian Deadlift", 4, "10", 120), _ex("Leg Press", 4, "12", 90), _ex("Leg Extension", 3, "15", 60), _ex("Leg Curl", 3, "15", 60), _ex("Hip Thrust", 3, "12", 75)]},
+        ],
+    },
+]
+
+ACHIEVEMENTS = [
+    {"code": "first_workout", "name": "First Rep", "description": "Complete your first workout", "icon": "Barbell", "xp": 50, "category": "workout"},
+    {"code": "workout_10", "name": "Getting Consistent", "description": "Complete 10 workouts", "icon": "Medal", "xp": 150, "category": "workout"},
+    {"code": "workout_50", "name": "Iron Addict", "description": "Complete 50 workouts", "icon": "Trophy", "xp": 500, "category": "workout"},
+    {"code": "streak_7", "name": "Week Warrior", "description": "Maintain a 7-day streak", "icon": "Flame", "xp": 200, "category": "streak"},
+    {"code": "streak_30", "name": "Unstoppable", "description": "Maintain a 30-day streak", "icon": "Flame", "xp": 800, "category": "streak"},
+    {"code": "first_pr", "name": "New Record", "description": "Set your first personal record", "icon": "Star", "xp": 75, "category": "pr"},
+    {"code": "first_meal", "name": "Fuel Up", "description": "Log your first meal", "icon": "ForkKnife", "xp": 50, "category": "nutrition"},
+    {"code": "hydrated", "name": "Well Hydrated", "description": "Hit your water goal", "icon": "Drop", "xp": 40, "category": "nutrition"},
+    {"code": "first_weight", "name": "Tracking Started", "description": "Log your first weight entry", "icon": "Scales", "xp": 40, "category": "progress"},
+    {"code": "goal_reached", "name": "Goal Crusher", "description": "Reach your target weight", "icon": "Target", "xp": 1000, "category": "progress"},
+    {"code": "level_5", "name": "Rising Star", "description": "Reach level 5", "icon": "Lightning", "xp": 0, "category": "level"},
+    {"code": "level_10", "name": "Elite", "description": "Reach level 10", "icon": "Crown", "xp": 0, "category": "level"},
+]
+
+CHALLENGES = [
+    {"code": "weekly_3_workouts", "name": "Train 3x", "description": "Complete 3 workouts this week", "target": 3, "type": "workouts", "xp": 150},
+    {"code": "weekly_water", "name": "Hydration Hero", "description": "Hit water goal 5 days this week", "target": 5, "type": "water_days", "xp": 120},
+    {"code": "weekly_log", "name": "Meal Master", "description": "Log meals 5 days this week", "target": 5, "type": "log_days", "xp": 120},
+]
